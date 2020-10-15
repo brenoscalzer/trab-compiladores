@@ -82,21 +82,59 @@ comments    "//".*
 "volatile"      { process_token("VOLATILE"); }
 "while"         { process_token("WHILE"); }
 
-"=="            { process_token("EQ"); }
+
 "="             { process_token("ASSIGN"); }
 "&"             { process_token("AMPERSAND"); }
 ","             { process_token("COMMA"); }
-"{"             { process_token("LBRA"); }
-"("             { process_token("LPAR"); }
-"<"             { process_token("LT"); }
-"-"             { process_token("MINUS"); }
-"%"             { process_token("MODULO"); }
-"/"             { process_token("OVER"); }
-"+"             { process_token("PLUS"); }
-"}"             { process_token("RBRA"); }
-")"             { process_token("RPAR"); }
+"."             { process_token("DOT"); }
+"!"             { process_token("EXCL"); }
+"~"             { process_token("TILDE"); }
+"-"             { process_token("HYPHEN"); }
 ";"             { process_token("SEMI"); }
+":"             { process_token("COLON"); }
+"%"             { process_token("MODULO"); }
+"^"             { process_token("CIRCUMFLEX"); }
+"|"             { process_token("BAR"); }
+"?"             { process_token("QUEST"); }
+
+"{"             { process_token("LBRA"); }
+"}"             { process_token("RBRA"); }
+"("             { process_token("LPAR"); }
+")"             { process_token("RPAR"); }
+"["             { process_token("LBRACK"); }
+"]"             { process_token("RBRACK"); }
+
+"+"             { process_token("PLUS"); }
+"-"             { process_token("MINUS"); }
 "*"             { process_token("TIMES"); }
+"/"             { process_token("OVER"); }
+
+"=="            { process_token("EQ"); }
+"!="            { process_token("NEQ"); }
+"<"             { process_token("LT"); }
+">"             { process_token("GT"); }
+"<="            { process_token("LE"); }
+">="            { process_token("GE"); }
+
+"..."           { process_token("ELLIPSIS"); }
+">>="           { process_token("RIGHT_ASSIGN"); }
+"<<="           { process_token("LEFT_ASSIGN"); }
+"+="            { process_token("ADD_ASSIGN"); }
+"-="            { process_token("SUB_ASSIGN"); }
+"*="            { process_token("MUL_ASSIGN"); }
+"/="            { process_token("DIV_ASSIGN"); }
+"%="            { process_token("MOD_ASSIGN"); }
+"&="            { process_token("AND_ASSIGN"); }
+"^="            { process_token("XOR_ASSIGN"); }
+"|="            { process_token("OR_ASSIGN"); }
+">>"            { process_token("RIGHT_OP"); }
+"<<"            { process_token("LEFT_OP"); }
+"++"            { process_token("INC"); }
+"--"            { process_token("DEC"); }
+"->"            { process_token("PTR"); }
+"&&"            { process_token("AND"); }
+"||"            { process_token("OR"); }
+
 
 {include_val}    { process_token("INCLUDE_VAL"); }
 {int_val}       { process_token("INT_VAL"); }

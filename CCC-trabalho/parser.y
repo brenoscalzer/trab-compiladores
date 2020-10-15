@@ -6,89 +6,106 @@
 
 %{
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "parser.h"
+
+extern int yylineno;
+extern char *yytext;
+extern char *auxtext;
 
 int yylex(void);
 void yyerror(char const *s);
 %}
 
-%token IDENTIFIER CONSTANT STRING_LITERAL SIZEOF
-%token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
-%token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
-%token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
-%token XOR_ASSIGN OR_ASSIGN TYPE_NAME
+%token ID INT_VAL FLOAT_VAL DOUBLE_VAL STR_VAL SIZEOF //ok
+%left PTR INC DEC LEFT_OP RIGHT_OP LE GE EQ NEQ LT GT ASSIGN
+%left AND OR MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
+%left SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
+%left XOR_ASSIGN OR_ASSIGN
 
-%token TYPEDEF EXTERN STATIC AUTO REGISTER
-%token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
-%token STRUCT UNION ENUM ELLIPSIS
+%left TYPEDEF EXTERN STATIC AUTO REGISTER
+%left CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
+%left STRUCT UNION ENUM ELLIPSIS
 
-%token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+%left CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+
+%left PLUS MINUS
+%left TIMES OVER
+%left SEMI LPAR RPAR LBRACE RBRACE
+
+%left DOT MODULO LBRA RBRA LBRACK RBRACK AMPERSAND BAR CIRCUMFLEX COLON COMMA QUEST TILDE TYPE_NAME EXCL
+
+// Start symbol for the grammar.
+%start translation_unit
 
 %%
-
 primary_expression
-  : IDENTIFIER
-  | CONSTANT
-  | STRING_LITERAL
-  | '(' expression ')'
-  | '(' error ')'
+  : ID
+  | INT_VAL
+  | FLOAT_VAL
+  | DOUBLE_VAL
+  | STR_VAL
+  | LPAR expression RPAR
+  | LPAR error RPAR
   ;
 
 postfix_expression
   : primary_expression
-  | postfix_expression '[' expression ']'
-  | postfix_expression '(' ')'
-  | postfix_expression '(' argument_expression_list ')'
-  | postfix_expression '.' IDENTIFIER
-  | postfix_expression PTR_OP IDENTIFIER
-  | postfix_expression INC_OP
-  | postfix_expression DEC_OP
+  | postfix_expression LBRACK expression RBRACK
+  | postfix_expression LPAR RPAR
+  | postfix_expression LPAR argument_expression_list RPAR
+  | postfix_expression DOT ID
+  | postfix_expression PTR ID
+  | postfix_expression INC
+  | postfix_expression DEC
   ;
 
 argument_expression_list
   : assignment_expression
-  | argument_expression_list ',' assignment_expression
-  | error ',' assignment_expression
+  | argument_expression_list COMMA assignment_expression
+  | error COMMA assignment_expression
   ;
 
 unary_expression
   : postfix_expression
-  | INC_OP unary_expression
-  | DEC_OP unary_expression
+  | INC unary_expression
+  | DEC unary_expression
   | unary_operator cast_expression
   | SIZEOF unary_expression
-  | SIZEOF '(' type_name ')'
+  | SIZEOF LPAR type_name RPAR
   ;
 
 unary_operator
-  : '&'
-  | '*'
-  | '+'
-  | '-'
-  | '~'
-  | '!'
+  : AMPERSAND
+  | TIMES
+  | PLUS
+  | MINUS
+  | TILDE
+  | EXCL
   ;
 
 cast_expression
   : unary_expression
-  | '(' type_name ')' cast_expression
+  | LPAR type_name RPAR cast_expression
   ;
 
 multiplicative_expression
   : cast_expression
-  | multiplicative_expression '*' cast_expression
-  | multiplicative_expression '/' cast_expression
-  | multiplicative_expression '%' cast_expression
-  | error '*' cast_expression
-  | error '/' cast_expression
-  | error '%' cast_expression
+  | multiplicative_expression TIMES cast_expression
+  | multiplicative_expression OVER cast_expression
+  | multiplicative_expression MODULO cast_expression
+  | error TIMES cast_expression
+  | error OVER cast_expression
+  | error MODULO cast_expression
   ;
 
 additive_expression
   : multiplicative_expression
-  | additive_expression '+' multiplicative_expression
-  | additive_expression '-' multiplicative_expression
-  | error '+' multiplicative_expression
-  | error '-' multiplicative_expression
+  | additive_expression PLUS multiplicative_expression
+  | additive_expression MINUS multiplicative_expression
+  | error PLUS multiplicative_expression
+  | error MINUS multiplicative_expression
   ;
 
 shift_expression
@@ -99,55 +116,55 @@ shift_expression
 
 relational_expression
   : shift_expression
-  | relational_expression '<' shift_expression
-  | relational_expression '>' shift_expression
-  | relational_expression LE_OP shift_expression
-  | relational_expression GE_OP shift_expression
-  | error '<' shift_expression
-  | error '>' shift_expression
-  | error LE_OP shift_expression
-  | error GE_OP shift_expression
+  | relational_expression LT shift_expression
+  | relational_expression GT shift_expression
+  | relational_expression LE shift_expression
+  | relational_expression GE shift_expression
+  | error LT shift_expression
+  | error GT shift_expression
+  | error LE shift_expression
+  | error GE shift_expression
   ;
 
 equality_expression
   : relational_expression
-  | equality_expression EQ_OP relational_expression
-  | equality_expression NE_OP relational_expression
-  | error EQ_OP relational_expression
-  | error NE_OP relational_expression
+  | equality_expression EQ relational_expression
+  | equality_expression NEQ relational_expression
+  | error EQ relational_expression
+  | error NEQ relational_expression
   ;
 
 and_expression
   : equality_expression
-  | and_expression '&' equality_expression
+  | and_expression AMPERSAND equality_expression
   ;
 
 exclusive_or_expression
   : and_expression
-  | exclusive_or_expression '^' and_expression
+  | exclusive_or_expression CIRCUMFLEX and_expression
   ;
 
 inclusive_or_expression
   : exclusive_or_expression
-  | inclusive_or_expression '|' exclusive_or_expression
+  | inclusive_or_expression BAR exclusive_or_expression
   ;
 
 logical_and_expression
   : inclusive_or_expression
-  | logical_and_expression AND_OP inclusive_or_expression
+  | logical_and_expression AND inclusive_or_expression
   ;
 
 logical_or_expression
   : logical_and_expression
-  | logical_or_expression OR_OP logical_and_expression
+  | logical_or_expression OR logical_and_expression
   ;
 
 conditional_expression
   : logical_or_expression
-  | logical_or_expression '?' expression ':' conditional_expression
-  | error '?' error ':' conditional_expression
-  | logical_or_expression '?' error ':' conditional_expression
-  | error '?' expression ':' conditional_expression
+  | logical_or_expression QUEST expression COLON conditional_expression
+  | error QUEST error COLON conditional_expression
+  | logical_or_expression QUEST error COLON conditional_expression
+  | error QUEST expression QUEST conditional_expression
   ;
 
 assignment_expression
@@ -156,7 +173,7 @@ assignment_expression
   ;
 
 assignment_operator
-  : '='
+  : ASSIGN
   | MUL_ASSIGN
   | DIV_ASSIGN
   | MOD_ASSIGN
@@ -171,7 +188,7 @@ assignment_operator
 
 expression
   : assignment_expression
-  | expression ',' assignment_expression
+  | expression COMMA assignment_expression
   ;
 
 constant_expression
@@ -179,10 +196,10 @@ constant_expression
   ;
 
 declaration
-  : declaration_specifiers ';'
-  | declaration_specifiers init_declarator_list ';'
-  | declaration_specifiers init_declarator_list '=' assignment_expression ';'
-  | declaration_specifiers error ';'
+  : declaration_specifiers SEMI
+  | declaration_specifiers init_declarator_list SEMI
+  | declaration_specifiers init_declarator_list ASSIGN assignment_expression SEMI
+  | declaration_specifiers error SEMI
   ;
 
 declaration_specifiers
@@ -196,14 +213,14 @@ declaration_specifiers
 
 init_declarator_list
   : init_declarator
-  | init_declarator_list ',' init_declarator
-  | error ',' init_declarator
+  | init_declarator_list COMMA init_declarator
+  | error COMMA init_declarator
   ;
 
 init_declarator
   : declarator
-  | declarator '=' initializer
-  | error '=' initializer
+  | declarator ASSIGN initializer
+  | error ASSIGN initializer
   ;
 
 storage_class_specifier
@@ -230,11 +247,11 @@ type_specifier
   ;
 
 struct_or_union_specifier
-  : struct_or_union IDENTIFIER '{' struct_declaration_list '}'
-  | struct_or_union '{' struct_declaration_list '}'
-  | struct_or_union IDENTIFIER
-  | struct_or_union IDENTIFIER '{' error '}'
-  | struct_or_union '{' error '}'
+  : struct_or_union ID LBRA struct_declaration_list RBRA
+  | struct_or_union LBRA struct_declaration_list RBRA
+  | struct_or_union ID
+  | struct_or_union ID LBRA error RBRA
+  | struct_or_union LBRA error RBRA
   ;
 
 struct_or_union
@@ -248,8 +265,8 @@ struct_declaration_list
   ;
 
 struct_declaration
-  : specifier_qualifier_list struct_declarator_list ';'
-  | error ';'
+  : specifier_qualifier_list struct_declarator_list SEMI
+  | error SEMI
   ;
 
 specifier_qualifier_list
@@ -261,35 +278,35 @@ specifier_qualifier_list
 
 struct_declarator_list
   : struct_declarator
-  | struct_declarator_list ',' struct_declarator
-  | error ',' struct_declarator
+  | struct_declarator_list COMMA struct_declarator
+  | error COMMA struct_declarator
   ;
 
 struct_declarator
   : declarator
-  | ':' constant_expression
-  | declarator ':' constant_expression
-  | error ':' constant_expression
+  | COLON constant_expression
+  | declarator COLON constant_expression
+  | error COLON constant_expression
   ;
 
 enum_specifier
-  : ENUM '{' enumerator_list '}'
-  | ENUM IDENTIFIER '{' enumerator_list '}'
-  | ENUM '{' error '}'
-  | ENUM IDENTIFIER '{' error '}'
-  | ENUM IDENTIFIER
+  : ENUM LBRA enumerator_list RBRA
+  | ENUM ID LBRA enumerator_list RBRA
+  | ENUM LBRA error RBRA
+  | ENUM ID LBRA error RBRA
+  | ENUM ID
   ;
 
 enumerator_list
   : enumerator
-  | enumerator_list ',' enumerator
-  | error ',' enumerator
+  | enumerator_list COMMA enumerator
+  | error COMMA enumerator
   ;
 
 enumerator
-  : IDENTIFIER
-  | IDENTIFIER '=' constant_expression
-  | error '=' constant_expression
+  : ID
+  | ID ASSIGN constant_expression
+  | error ASSIGN constant_expression
   ;
 
 type_qualifier
@@ -303,24 +320,24 @@ declarator
   ;
 
 direct_declarator
-  : IDENTIFIER
-  | '(' declarator ')'
-  | direct_declarator '[' constant_expression ']'
-  | direct_declarator '[' ']'
-  | direct_declarator '(' parameter_type_list ')'
-  | direct_declarator '(' identifier_list ')'
-  | direct_declarator '(' error ')'
-  | error '(' error ')'
-  | direct_declarator '(' ')'
-  | '(' error ')'
+  : ID
+  | LPAR declarator RPAR
+  | direct_declarator LBRACK constant_expression RBRACK
+  | direct_declarator LBRACK RBRACK
+  | direct_declarator LPAR parameter_type_list RPAR
+  | direct_declarator LPAR identifier_list RPAR
+  | direct_declarator LPAR error RPAR
+  | error LPAR error RPAR
+  | direct_declarator LPAR RPAR
+  | LPAR error RPAR
   ;
 
 pointer
-  : '*'
-  | '*' type_qualifier_list
-  | '*' pointer
-  | '*' type_qualifier_list pointer
-  | '*' error pointer
+  : TIMES
+  | TIMES type_qualifier_list
+  | TIMES pointer
+  | TIMES type_qualifier_list pointer
+  | TIMES error pointer
   ;
 
 type_qualifier_list
@@ -331,14 +348,14 @@ type_qualifier_list
 
 parameter_type_list
   : parameter_list
-  | parameter_list ',' ELLIPSIS
-  | error ',' ELLIPSIS
+  | parameter_list COMMA ELLIPSIS
+  | error COMMA ELLIPSIS
   ;
 
 parameter_list
   : parameter_declaration
-  | parameter_list ',' parameter_declaration
-  | error ',' parameter_declaration
+  | parameter_list COMMA parameter_declaration
+  | error COMMA parameter_declaration
   ;
 
 parameter_declaration
@@ -348,8 +365,8 @@ parameter_declaration
   ;
 
 identifier_list
-  : IDENTIFIER
-  | identifier_list ',' IDENTIFIER
+  : ID
+  | identifier_list COMMA ID
   ;
 
 type_name
@@ -364,31 +381,31 @@ abstract_declarator
   ;
 
 direct_abstract_declarator
-  : '(' abstract_declarator ')'
-  | '[' ']'
-  | '[' constant_expression ']'
-  | '[' error ']'
-  | direct_abstract_declarator '[' ']'
-  | direct_abstract_declarator '[' constant_expression ']'
-  | '(' ')'
-  | '(' parameter_type_list ')'
-  | direct_abstract_declarator '(' ')'
-  | direct_abstract_declarator '(' parameter_type_list ')'
-  | direct_abstract_declarator '(' error ')'
-  | direct_abstract_declarator '[' error ']'
+  : LPAR abstract_declarator RPAR
+  | LBRACK RBRACK
+  | LBRACK constant_expression RBRACK
+  | LBRACK error RBRACK
+  | direct_abstract_declarator LBRACK RBRACK
+  | direct_abstract_declarator LBRACK constant_expression RBRACK
+  | LPAR RPAR
+  | LPAR parameter_type_list RPAR
+  | direct_abstract_declarator LPAR RPAR
+  | direct_abstract_declarator LPAR parameter_type_list RPAR
+  | direct_abstract_declarator LPAR error RPAR
+  | direct_abstract_declarator LPAR error RPAR
   ;
 
 initializer
   : assignment_expression
-  | '{' initializer_list '}'
-  | '{' initializer_list ',' '}'
-  | '{' error '}'
+  | LBRA initializer_list RBRA
+  | LBRA initializer_list COMMA RBRA
+  | LBRA error RBRA
   ;
 
 initializer_list
   : initializer
-  | initializer_list ',' initializer
-  | error ',' initializer
+  | initializer_list COMMA initializer
+  | error COMMA initializer
   ;
 
 statement
@@ -401,17 +418,17 @@ statement
   ;
 
 labeled_statement
-  : IDENTIFIER ':' statement
-  | CASE constant_expression ':' statement
-  | DEFAULT ':' statement
+  : ID COLON statement
+  | CASE constant_expression COLON statement
+  | DEFAULT COLON statement
   ;
 
 compound_statement
-  : '{' '}'
-  | '{' statement_list '}'
-  | '{' declaration_list '}'
-  | '{' declaration_list statement_list '}'
-  | '{' error '}'
+  : LBRA RBRA
+  | LBRA statement_list RBRA
+  | LBRA declaration_list RBRA
+  | LBRA declaration_list statement_list RBRA
+  | LBRA error RBRA
   ;
 
 declaration_list
@@ -425,35 +442,35 @@ statement_list
   ;
 
 expression_statement
-  : error ';'
-  | expression ';'
+  : error SEMI
+  | expression SEMI
   ;
 
 selection_statement
-  : IF '(' expression ')' statement
-  | IF '(' expression ')' statement ELSE statement
-  | SWITCH '(' expression ')' statement
-  | IF '(' error ')' statement
-  | IF '(' error ')' statement ELSE statement
-  | SWITCH '(' error ')' statement
+  : IF LPAR expression RPAR statement
+  | IF LPAR expression RPAR statement ELSE statement
+  | SWITCH LPAR  expression RPAR statement
+  | IF LPAR error RPAR statement
+  | IF LPAR error RPAR statement ELSE statement
+  | SWITCH LPAR error RPAR statement
   ;
 
 iteration_statement
-  : WHILE '(' expression ')' statement
-  | DO statement WHILE '(' expression ')' ';'
-  | FOR '(' expression_statement expression_statement ')' statement
-  | FOR '(' expression_statement expression_statement expression ')' statement
-  | DO error WHILE '(' expression ')' ';'
-  | FOR '(' error')' statement
+  : WHILE LPAR expression RPAR statement
+  | DO statement WHILE LPAR expression RPAR SEMI
+  | FOR LPAR expression_statement expression_statement RPAR statement
+  | FOR LPAR expression_statement expression_statement expression RPAR statement
+  | DO error WHILE LPAR expression RPAR SEMI
+  | FOR LPAR error RPAR statement
   ;
 
 jump_statement
-  : GOTO IDENTIFIER ';'
-  | CONTINUE ';'
-  | BREAK ';'
-  | RETURN ';'
-  | RETURN expression ';'
-  | RETURN error ';'
+  : GOTO ID SEMI
+  | CONTINUE SEMI
+  | BREAK SEMI
+  | RETURN SEMI
+  | RETURN expression SEMI
+  | RETURN error SEMI
   ;
 
 translation_unit
@@ -476,8 +493,12 @@ function_definition
   | declarator error compound_statement
   | error compound_statement
   ;
-
 %%
+
+void yyerror (char const *s) {
+printf("SYNTAX ERROR (%d): %s\n", yylineno, s);
+exit(EXIT_FAILURE);
+}
 
 int main(void) {
     if (yyparse() == 0) printf("PARSE SUCCESSFUL!\n");
