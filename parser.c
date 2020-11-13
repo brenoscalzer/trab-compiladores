@@ -2745,13 +2745,19 @@ yyreturn:
 #include <stdio.h>
 #include <string.h>
 // Primitive error handling.
+void type_error(const char* op, Type t1, Type t2) {
+    printf("SEMANTIC ERROR (%d): incompatible types for operator '%s', LHS is '%s' and RHS is '%s'.\n",
+           yylineno, op, get_text(t1), get_text(t2));
+    exit(EXIT_FAILURE);
+}
+
 void yyerror (char const *s) {
   printf("SYNTAX ERROR (%d): %s\n", yylineno, s);
   exit(EXIT_FAILURE);
 }
 
 Type check_var() {
-  printf("\n alo: %s", yytext);
+  printf("\nentrou -%s-\n", yytext);
   if(strcmp(yytext, "(") == 0){
     return;
   }
@@ -2779,7 +2785,8 @@ void new_var() {
 }
 
 void check_assign(Type l, Type r) {
-  printf("\nhellooo %s %s", l, r);
+  if (l != r)
+    type_error(":=", l, r);
 }
 
 int main() {
